@@ -1,0 +1,93 @@
+name: CI/CD
+
+# Commit → PR → build → unit tests → static analysis → security scan → integration tests
+#   → Docker build → staging → QA approval → production
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-test:
+    runs-on: ubuntu-latest
+    services:
+      postgis:
+        image: postgis/postgis:16-3.4
+        env: { POSTGRES_USER: retailgeo, POSTGRES_PASSWORD: retailgeo, POSTGRES_DB: retailgeo_test }
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U retailgeo" --health-interval 5s --health-retries 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: npm }
+      - run: npm ci
+      - name: Typecheck
+        run: npm run typecheck
+      - name: Lint (static analysis)
+        run: npm run lint
+      - name: Unit + integration tests (in-memory and PostGIS)
+        run: npm test
+        env:
+          TEST_DATABASE_URL: postgres://retailgeo:retailgeo@localhost:5432/retailgeo_test
+      - name: Build
+        run: npm run build && npm run build:demo
+      - name: OpenAPI contract is current
+        run: npm run openapi -w @retailgeo/api && git diff --exit-code docs/openapi.json
+
+  security:
+    runs-on: ubuntu-latest
+    permissions: { contents: read, security-events: write }
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: npm }
+      - run: npm ci
+      - name: Dependency audit
+        run: npm audit --omit=dev --audit-level=high
+      - name: CodeQL
+        uses: github/codeql-action/init@v3
+        with: { languages: javascript-typescript }
+      - uses: github/codeql-action/analyze@v3
+      - name: Secret scan
+        uses: gitleaks/gitleaks-action@v2
+        env: { GITHUB_TOKEN: "${{ secrets.GITHUB_TOKEN }}" }
+
+  docker:
+    needs: [build-test, security]
+    runs-on: ubuntu-latest
+    permissions: { contents: read, id-token: write }
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      - name: Build images
+        run: |
+          docker build -f apps/api/Dockerfile -t retailgeo-api:${{ github.sha }} .
+          docker build -f apps/web/Dockerfile -t retailgeo-web:${{ github.sha }} .
+      - name: Image vulnerability scan
+        uses: aquasecurity/trivy-action@0.28.0
+        with: { image-ref: "retailgeo-api:${{ github.sha }}", severity: "CRITICAL,HIGH", exit-code: "1" }
+      # Push to ECR with OIDC (aws-actions/configure-aws-credentials + amazon-ecr-login) on main only.
+
+  deploy-staging:
+    if: github.ref == 'refs/heads/main'
+    needs: docker
+    runs-on: ubuntu-latest
+    environment: staging
+    steps:
+      - run: echo "Run DB migrations task, then update ECS service retailgeo-api-staging to ${{ github.sha }}"
+
+  deploy-production:
+    if: github.ref == 'refs/heads/main'
+    needs: deploy-staging
+    runs-on: ubuntu-latest
+    environment: production   # protected environment = QA approval gate
+    steps:
+      - run: echo "Blue/green deploy retailgeo-api-prod and retailgeo-web to ${{ github.sha }}"

@@ -1,0 +1,57 @@
+# Local full stack: PostgreSQL + PostGIS, Redis, API, web.
+#   docker compose up --build        → web on http://localhost:8080, API docs on http://localhost:4000/api/v1/docs
+#   docker compose --profile search up   also starts OpenSearch (reserved for the search-index adapter)
+services:
+  db:
+    image: postgis/postgis:16-3.4
+    environment:
+      POSTGRES_USER: retailgeo
+      POSTGRES_PASSWORD: retailgeo
+      POSTGRES_DB: retailgeo
+    ports: ["5432:5432"]
+    volumes: [pgdata:/var/lib/postgresql/data]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U retailgeo"]
+      interval: 5s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    ports: ["6379:6379"]
+
+  opensearch:
+    image: opensearchproject/opensearch:2.17.0
+    profiles: ["search"]
+    environment:
+      discovery.type: single-node
+      DISABLE_SECURITY_PLUGIN: "true"
+      OPENSEARCH_JAVA_OPTS: -Xms512m -Xmx512m
+    ports: ["9200:9200"]
+
+  migrate:
+    build: { context: ., dockerfile: apps/api/Dockerfile }
+    command: ["sh", "-c", "node dist/migrate.js && node dist/seed.js --reset"]
+    environment:
+      DATABASE_URL: postgres://retailgeo:retailgeo@db:5432/retailgeo
+      PASSWORD_ITERATIONS: "100000"
+    depends_on: { db: { condition: service_healthy } }
+
+  api:
+    build: { context: ., dockerfile: apps/api/Dockerfile }
+    env_file: .env.example
+    environment:
+      DATABASE_URL: postgres://retailgeo:retailgeo@db:5432/retailgeo
+      CORS_ORIGINS: http://localhost:8080,http://localhost:5173
+      PUBLIC_WEB_URL: http://localhost:8080
+    ports: ["4000:4000"]
+    depends_on:
+      db: { condition: service_healthy }
+      migrate: { condition: service_completed_successfully }
+
+  web:
+    build: { context: ., dockerfile: apps/web/Dockerfile }
+    ports: ["8080:8080"]
+    depends_on: [api]
+
+volumes:
+  pgdata:

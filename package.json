@@ -1,0 +1,37 @@
+{
+  "name": "retailgeo",
+  "private": true,
+  "version": "0.1.0",
+  "description": "RetailGeo Insights — Phase 1 Web Beta (Desmata Inc.)",
+  "workspaces": [
+    "packages/*",
+    "apps/*"
+  ],
+  "scripts": {
+    "dev:api": "npm run dev -w @retailgeo/api",
+    "dev:web": "npm run dev -w @retailgeo/web",
+    "build": "npm run build -w @retailgeo/api && npm run build -w @retailgeo/web",
+    "build:demo": "npm run build:demo -w @retailgeo/web",
+    "typecheck": "tsc -p packages/core && tsc -p apps/api && tsc -p apps/web",
+    "test": "vitest run",
+    "lint": "eslint packages apps --max-warnings=200",
+    "db:migrate": "npm run db:migrate -w @retailgeo/api",
+    "db:seed": "npm run db:seed -w @retailgeo/api",
+    "openapi": "npm run openapi -w @retailgeo/api"
+  },
+  "devDependencies": {
+    "@types/node": "^22.9.0",
+    "eslint": "^9.14.0",
+    "eslint-plugin-react-hooks": "^5.2.0",
+    "typescript": "^5.6.3",
+    "typescript-eslint": "^8.13.0",
+    "vitest": "^5.0.2"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {
+    "esbuild": "0.28.2",
+    "vite": "8.3.1"
+  }
+}

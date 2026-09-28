@@ -1,0 +1,36 @@
+{
+  "name": "@retailgeo/api",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch src/server.ts",
+    "build": "esbuild src/server.ts src/migrate.ts src/seed.ts --bundle --platform=node --format=esm --target=node20 --outdir=dist --packages=external --alias:@retailgeo/core=../../packages/core/src/index.ts",
+    "start": "node dist/server.js",
+    "db:migrate": "tsx src/migrate.ts",
+    "db:seed": "tsx src/seed.ts",
+    "openapi": "tsx src/print-openapi.ts > ../../docs/openapi.json"
+  },
+  "dependencies": {
+    "@retailgeo/core": "0.1.0",
+    "cors": "^2.8.5",
+    "express": "^4.21.1",
+    "express-rate-limit": "^7.4.1",
+    "helmet": "^8.0.0",
+    "pg": "^8.13.1",
+    "pino": "^9.5.0",
+    "pino-http": "^10.3.0",
+    "swagger-ui-express": "^5.0.1",
+    "zod": "^3.23.8"
+  },
+  "devDependencies": {
+    "@types/cors": "^2.8.17",
+    "@types/express": "^5.0.0",
+    "@types/pg": "^8.11.10",
+    "@types/supertest": "^6.0.2",
+    "@types/swagger-ui-express": "^4.1.6",
+    "esbuild": "^0.28.2",
+    "supertest": "^7.0.0",
+    "tsx": "^4.19.2"
+  }
+}

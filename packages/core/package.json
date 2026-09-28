@@ -1,0 +1,13 @@
+{
+  "name": "@retailgeo/core",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "src/index.ts",
+  "types": "src/index.ts",
+  "description": "Framework-agnostic domain layer: entities, business rules, services, route table. Shared by the API, the web demo transport, and future mobile/AI clients.",
+  "dependencies": {
+    "zod": "^3.23.8",
+    "zod-to-json-schema": "^3.23.5"
+  }
+}

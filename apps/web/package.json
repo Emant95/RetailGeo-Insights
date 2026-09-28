@@ -1,0 +1,30 @@
+{
+  "name": "@retailgeo/web",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc -p . && vite build",
+    "build:demo": "vite build --mode demo",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "@retailgeo/core": "0.1.0",
+    "esbuild": "0.28.2",
+    "leaflet": "^1.9.4",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "react-router-dom": "^7.18.4",
+    "vitest": "5.0.2",
+    "zustand": "^5.0.1"
+  },
+  "devDependencies": {
+    "@types/leaflet": "^1.9.14",
+    "@types/react": "^18.3.12",
+    "@types/react-dom": "^18.3.1",
+    "@vitejs/plugin-react": "^4.3.3",
+    "vite": "^8.3.1",
+    "vite-plugin-singlefile": "^2.0.3"
+  }
+}
